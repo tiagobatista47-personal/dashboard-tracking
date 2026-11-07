@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Tracking | Código da Consistência</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {--bg:#0f1115;--panel:#171a21;--panel2:#1d222b;--text:#f4f6f8;--muted:#9ca3af;--line:#2c3340;--accent:#d6a84b;--accent2:#f1cf85;--danger:#ff7a7a;--shadow:0 12px 32px rgba(0,0,0,.22)}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{width:min(1440px,calc(100% - 32px));margin:0 auto;padding:28px 0 48px}.topbar{display:flex;gap:18px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;margin-bottom:24px}.title h1{margin:0 0 6px;font-size:clamp(26px,4vw,40px);letter-spacing:-.03em}.title p{margin:0;color:var(--muted);font-size:14px}
+    .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}button,input{border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text);padding:10px 12px;font-size:14px}button{cursor:pointer;transition:.2s ease}button:hover{border-color:var(--accent);transform:translateY(-1px)}button.active{background:var(--accent);color:#111;border-color:var(--accent);font-weight:700}.custom-range{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}.status{min-height:22px;margin:8px 0 18px;color:var(--muted);font-size:13px}.error{color:var(--danger)}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}.metric-label{color:var(--muted);font-size:13px;margin-bottom:6px}.metric-value{font-size:30px;font-weight:800;letter-spacing:-.03em}.metric-sub{color:var(--muted);font-size:12px;margin-top:6px}.section{margin-top:20px}.section-title{margin:0 0 12px;font-size:18px}
+    .funnel{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}.funnel-step{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}.funnel-step strong{display:block;font-size:24px;margin:4px 0}.funnel-step span{color:var(--muted);font-size:12px}.conv{color:var(--accent2)!important;font-weight:700;margin-top:4px;display:block}.two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:20px}.chart-wrap{height:360px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:11px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{color:var(--muted);font-weight:600}.footer-note{margin-top:18px;color:var(--muted);font-size:12px}
+    @media(max-width:1050px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.funnel{grid-template-columns:repeat(4,minmax(0,1fr))}.two-col{grid-template-columns:1fr}}@media(max-width:640px){.wrap{width:min(100% - 20px,1440px);padding-top:18px}.grid{grid-template-columns:1fr 1fr}.funnel{grid-template-columns:1fr 1fr}.metric-value{font-size:25px}.chart-wrap{height:300px}}
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <div class="title"><h1>Dashboard de Tracking</h1><p>Análise do treino • Código da Consistência</p></div>
+    <div>
+      <div class="filters">
+        <button data-period="today">Hoje</button><button data-period="7">7 dias</button><button data-period="30" class="active">30 dias</button><button data-period="90">90 dias</button><button data-period="all">Tudo</button>
+      </div>
+      <div class="custom-range"><input type="date" id="startDate"><span style="color:var(--muted)">até</span><input type="date" id="endDate"><button id="applyCustom">Aplicar período</button></div>
+    </div>
+  </div>
+  <div id="status" class="status">Carregando dados...</div>
+  <section class="grid">
+    <div class="card"><div class="metric-label">Sessões únicas</div><div class="metric-value" id="sessions">0</div><div class="metric-sub">Sessões identificadas pelo tracking</div></div>
+    <div class="card"><div class="metric-label">PageViews</div><div class="metric-value" id="pageViews">0</div><div class="metric-sub">Sessões que visualizaram a página</div></div>
+    <div class="card"><div class="metric-label">Inícios</div><div class="metric-value" id="starts">0</div><div class="metric-sub" id="startRate">0% das visitas</div></div>
+    <div class="card"><div class="metric-label">Leads</div><div class="metric-value" id="leads">0</div><div class="metric-sub" id="leadRate">0% das visitas</div></div>
+  </section>
+  <section class="section"><h2 class="section-title">Funil</h2><div class="funnel">
+    <div class="funnel-step"><span>PageView</span><strong id="fPageView">0</strong><span class="conv">Base</span></div>
+    <div class="funnel-step"><span>Início</span><strong id="fStart">0</strong><span class="conv" id="cStart">0%</span></div>
+    <div class="funnel-step"><span>Quiz 25%</span><strong id="fQuiz25">0</strong><span class="conv" id="cQuiz25">0%</span></div>
+    <div class="funnel-step"><span>Quiz 50%</span><strong id="fQuiz50">0</strong><span class="conv" id="cQuiz50">0%</span></div>
+    <div class="funnel-step"><span>Quiz 75%</span><strong id="fQuiz75">0</strong><span class="conv" id="cQuiz75">0%</span></div>
+    <div class="funnel-step"><span>Lead</span><strong id="fLead">0</strong><span class="conv" id="cLead">0%</span></div>
+    <div class="funnel-step"><span>WhatsApp</span><strong id="fWhatsapp">0</strong><span class="conv" id="cWhatsapp">0%</span></div>
+  </div></section>
+  <section class="two-col">
+    <div class="card"><h2 class="section-title">Evolução diária</h2><div class="chart-wrap"><canvas id="dailyChart"></canvas></div></div>
+    <div class="card"><h2 class="section-title">Resumo do período</h2><table><tbody>
+      <tr><th>Eventos brutos</th><td id="rawEvents">0</td></tr><tr><th>Conversão visita → início</th><td id="summaryStartRate">0%</td></tr><tr><th>Conversão visita → lead</th><td id="summaryLeadRate">0%</td></tr><tr><th>Conversão visita → WhatsApp</th><td id="summaryWhatsappRate">0%</td></tr><tr><th>Período</th><td id="periodLabel">—</td></tr>
+    </tbody></table></div>
+  </section>
+  <section class="section card"><h2 class="section-title">Origem do tráfego</h2><div class="table-wrap"><table><thead><tr><th>Origem</th><th>Sessões</th><th>PageViews</th><th>Inícios</th><th>Taxa de início</th><th>Leads</th><th>Taxa de lead</th><th>WhatsApp</th></tr></thead><tbody id="sourceTable"><tr><td colspan="8">Sem dados.</td></tr></tbody></table></div></section>
+  <div class="footer-note">Dados agregados da aba Tracking. O dashboard não exibe nomes, e-mails, WhatsApp ou Session IDs individuais.</div>
+</main>
+<script>
+const API_URL="https://script.google.com/macros/s/AKfycbz_aed31Rgm-2EWZKm2yLBbmPrPvGOMXyA51xsOU7b29xUBRnaHxTVjcYOHhI19TA_aYw/exec";
+let chart=null; const $=id=>document.getElementById(id);
+function fmtPct(value){const n=Number(value||0);return `${n.toFixed(1).replace('.',',')}%`} function setText(id,value){$(id).textContent=value}
+async function loadDashboard(query="period=30"){
+  setText("status","Carregando dados...");$("status").classList.remove("error");
+  try{const response=await fetch(`${API_URL}?${query}`,{cache:"no-store"});if(!response.ok)throw new Error(`HTTP ${response.status}`);const json=await response.json();if(json.status!=="success")throw new Error(json.message||"Erro desconhecido na API.");renderDashboard(json);const when=new Date(json.generated_at);setText("status",`Atualizado em ${when.toLocaleString("pt-BR")} • filtro: ${json.filters?.period||"—"}`)}catch(error){console.error(error);$("status").classList.add("error");setText("status",`Erro ao carregar o dashboard: ${error.message}`)}}
+function renderDashboard(json){const data=json.data||{},summary=data.summary||{},funnel=data.funnel||{},conv=data.conversions||{};setText("sessions",summary.sessions||0);setText("pageViews",funnel.pageViews||0);setText("starts",funnel.starts||0);setText("leads",funnel.leads||0);setText("startRate",`${fmtPct(conv.pageViewToStart)} das visitas`);setText("leadRate",`${fmtPct(conv.pageViewToLead)} das visitas`);setText("fPageView",funnel.pageViews||0);setText("fStart",funnel.starts||0);setText("fQuiz25",funnel.quiz25||0);setText("fQuiz50",funnel.quiz50||0);setText("fQuiz75",funnel.quiz75||0);setText("fLead",funnel.leads||0);setText("fWhatsapp",funnel.whatsappClicks||0);setText("cStart",fmtPct(conv.pageViewToStart));setText("cQuiz25",fmtPct(conv.startToQuiz25));setText("cQuiz50",fmtPct(conv.quiz25ToQuiz50));setText("cQuiz75",fmtPct(conv.quiz50ToQuiz75));setText("cLead",fmtPct(conv.quiz75ToLead));setText("cWhatsapp",fmtPct(conv.leadToWhatsapp));setText("rawEvents",summary.rawEvents||0);setText("summaryStartRate",fmtPct(conv.pageViewToStart));setText("summaryLeadRate",fmtPct(conv.pageViewToLead));setText("summaryWhatsappRate",fmtPct(conv.pageViewToWhatsapp));const p=data.period||{};setText("periodLabel",p.label||json.filters?.period||"—");renderChart(data.byDay||[]);renderSourceTable(data.bySource||[])}
+function renderChart(rows){const labels=rows.map(r=>{const [y,m,d]=r.date.split('-');return `${d}/${m}`});const pageViews=rows.map(r=>Number(r.PageView||0));const starts=rows.map(r=>Number(r.StartDiagnostic||0));if(chart)chart.destroy();chart=new Chart($("dailyChart"),{type:"line",data:{labels,datasets:[{label:"PageViews",data:pageViews,tension:.28,borderWidth:2},{label:"Inícios",data:starts,tension:.28,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#d7dce2"}}},scales:{x:{ticks:{color:"#9ca3af"},grid:{color:"rgba(255,255,255,.05)"}},y:{beginAtZero:true,ticks:{precision:0,color:"#9ca3af"},grid:{color:"rgba(255,255,255,.05)"}}}}})}
+function renderSourceTable(rows){const tbody=$("sourceTable");tbody.innerHTML="";if(!rows.length){tbody.innerHTML='<tr><td colspan="8">Sem dados para o período.</td></tr>';return}rows.forEach(row=>{const tr=document.createElement("tr");tr.innerHTML=`<td>${escapeHtml(row.source||"direct")}</td><td>${row.sessions||0}</td><td>${row.pageViews||0}</td><td>${row.starts||0}</td><td>${fmtPct(row.startRate)}</td><td>${row.leads||0}</td><td>${fmtPct(row.leadRate)}</td><td>${row.whatsappClicks||0}</td>`;tbody.appendChild(tr)})}
+function escapeHtml(value){return String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
+document.querySelectorAll("[data-period]").forEach(btn=>btn.addEventListener("click",()=>{document.querySelectorAll("[data-period]").forEach(b=>b.classList.remove("active"));btn.classList.add("active");loadDashboard(`period=${encodeURIComponent(btn.dataset.period)}`)}));
+$("applyCustom").addEventListener("click",()=>{const start=$("startDate").value,end=$("endDate").value;if(!start||!end){alert("Selecione a data inicial e a data final.");return}if(start>end){alert("A data inicial não pode ser posterior à data final.");return}document.querySelectorAll("[data-period]").forEach(b=>b.classList.remove("active"));loadDashboard(`start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)});
+loadDashboard("period=30");
+</script>
+</body>
+</html>
